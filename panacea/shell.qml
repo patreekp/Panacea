@@ -1619,6 +1619,7 @@ PanelWindow {
     // Один обработчик на сигнал: QML второго не допускает, поэтому всё, что
     // должно случиться при запуске, собрано здесь.
     Component.onCompleted: {
+        syncScreen();
         fsProbe.restart();
         syncGreeterLocale();
         monReplayTimer.restart();
@@ -4302,20 +4303,30 @@ PanelWindow {
     // Hyprland ещё не ответил, отдаём null — Quickshell возьмёт экран сам.
     screen: root.pickScreen
 
-    readonly property var pickScreen: {
+    readonly property var followScreen: {
         var want = root.cfg.pillScreen;
         if (want && want !== "auto") {
             var all = Quickshell.screens;
             for (var i = 0; i < all.length; i++)
                 if (all[i].name === want) return all[i];
         }
-        if (Compositor.isNiri) {
-            var nm = Compositor.focusedMonitor;
-            return (nm && nm.screen) ? nm.screen : null;
-        }
-        var fm = Hyprland.focusedMonitor;
+        // При follow_mouse фокус монитора идёт за курсором, так что это и
+        // есть экран под курсором.
+        var fm = Compositor.focusedMonitor;
         return (fm && fm.screen) ? fm.screen : null;
     }
+
+    // Открытая панель или Launchpad остаются там, где их открыли: иначе
+    // курсор, ушедший на соседний монитор, утаскивал бы их за собой посреди
+    // работы. Догоняем фокус, как только всё закрыто.
+    readonly property bool screenHeld: root.expanded || root.launchpadOpen
+    property var pickScreen: null
+    function syncScreen() {
+        if (!root.screenHeld && root.pickScreen !== root.followScreen)
+            root.pickScreen = root.followScreen;
+    }
+    onFollowScreenChanged: syncScreen()
+    onScreenHeldChanged: syncScreen()
 
     // Прижимаемся тремя кромками: свободной остаётся та, в сторону которой
     // раскрывается панель. Иначе слой занял бы весь экран и exclusiveZone

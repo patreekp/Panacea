@@ -231,10 +231,18 @@ Singleton {
         if (!comp.isHyprland) return null;
         var m = Hyprland.focusedMonitor;
         if (!m) return null;
+        // У HyprlandMonitor нет свойства screen — экран ищем по имени выхода,
+        // как и у niri. Без этого здесь всегда был null, и остров с
+        // Launchpad садились на первый экран, куда бы ни ушёл курсор.
+        var name = String(m.name || "");
+        var screen = null;
+        var all = Quickshell.screens;
+        for (var i = 0; i < all.length; i++)
+            if (all[i].name === name) { screen = all[i]; break; }
         return {
-            name: String(m.name || ""),
+            name: name,
             x: m.x, y: m.y, width: m.width, height: m.height,
-            screen: m.screen || null
+            screen: screen
         };
     }
 
